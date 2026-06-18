@@ -2,12 +2,15 @@
  
 **Do pothole repair times in Chicago vary with neighborhood income? An observational analysis of 76k 311 requests.**
  
-Across Chicago's 77 community areas, lower-income neighborhoods show modestly longer pothole repair times. The pattern is statistically significant and persists after controlling for request volume — so it isn't just a backlog effect — but it's weak: income accounts for only about 9% of the variation. This is an observed association, not evidence of causation; unmeasured factors like road condition and pothole severity likely matter more. I framed the project around separating differences in neighborhood conditions from differences in measured response times — a methodological question, not a policy claim.
+Across Chicago's 77 community areas, lower-income neighborhoods show modestly longer pothole repair times. The pattern is statistically significant and persists after controlling for request volume so it isn't just a backlog effect  but it's weak: income accounts for only about 9% of the variation. This is an observed association, not evidence of causation; unmeasured factors like road condition and pothole severity likely matter more. I framed the project around separating differences in neighborhood conditions from differences in measured response times — a methodological question, not a policy claim.
+ 
+**Tools:** Python (pandas, scikit-learn, statsmodels, geopandas, libpysal/esda), matplotlib.
  
 ## Data
  
 - **311 pothole requests** (Chicago Data Portal): ~76k, 2020–2025, filtered to "Pothole in Street."
 - **Socioeconomic indicators by community area** (Chicago Data Portal, 2008–2012): per-capita income and hardship index, joined on community-area number.
+- **Community-area boundaries** (Chicago Data Portal, GeoJSON): the geographic shape of each of the 77 community areas, used to determine which areas border each other for the spatial analysis.
 Income data predates the pothole data by ~a decade, so it serves as a proxy for relative neighborhood wealth; areas that changed substantially may be misclassified.
  
 ## Method
@@ -17,6 +20,9 @@ Income data predates the pothole data by ~a decade, so it serves as a proxy for 
 3. Tested the most obvious alternative explanation first: request volume (busier areas may build backlogs).
 4. Regressed response time on income + volume together, isolating income's association with volume held constant.
 5. Robustness check: re-ran using the hardship index instead of income — same direction.
+6. Statistical inference: refit the income + volume regression in `statsmodels` (OLS) to obtain p-values and confidence intervals, testing whether the income effect is statistically significant rather than just present. Standardized the predictors so the two coefficients are directly comparable.
+7. Spatial autocorrelation: built a neighbor map from the community-area boundaries and computed Moran's I to test whether response times cluster geographically — i.e., whether nearby areas have similar wait times, which would violate the independence assumption of the regression.
+
 ## Findings
  
 The raw spread is large — the slowest community area (Kenwood, ~64 days) shows repair times roughly 13x longer than the fastest (the Loop, ~5 days).
@@ -30,6 +36,7 @@ That said, the effect is small: the model explains only ~9% of the variation. In
 - **Significance:** the income association is statistically significant (p = 0.022); volume is not (p = 0.124) once income is included. So the income effect is unlikely to be an artifact of the small (77-area) sample.
 - **Measure of disadvantage:** re-running with a composite hardship index instead of per-capita income gives the same direction, so the finding doesn't depend on how disadvantage is measured.
 - **Spatial autocorrelation:** I tested whether nearby community areas have similar response times (Moran's I = 0.30, p = 0.001). They do — response times cluster geographically, so the areas are not statistically independent. This means the regression's standard errors are likely slightly optimistic; the income association still holds, but its precision should be read with that caveat. A spatial regression model would be the proper next step.
+
 ## Why the Simple Story Doesn't Hold
  
 The extremes don't fit a clean "lower-income = slower" pattern: Kenwood (slow) is mixed-to-affluent, O'Hare (slow) is an airport rather than a residential area, and some lower-income areas like West Englewood and Roseland are among the fastest. This is consistent with income accounting for so little of the variation — at the neighborhood level, unmeasured factors like land use and road infrastructure appear more relevant than wealth.
